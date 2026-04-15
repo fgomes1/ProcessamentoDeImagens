@@ -1,0 +1,58 @@
+# ─────────────────────────────────────────────
+# AMBIENTE VIRTUAL PYTHON
+# ─────────────────────────────────────────────
+venv/
+.venv/
+env/
+.env/
+
+# ─────────────────────────────────────────────
+# CACHE DO PYTHON
+# ─────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# ─────────────────────────────────────────────
+# RESULTADOS GERADOS PELO SCRIPT
+# (imagens processadas e histogramas)
+# ─────────────────────────────────────────────
+resultados/
+
+# ─────────────────────────────────────────────
+# IMAGENS DE ENTRADA (opcional — remova se
+# quiser versionar as imagens de teste)
+# ─────────────────────────────────────────────
+# *.jpg
+# *.jpeg
+# *.png
+# *.bmp
+# *.tiff
+
+# ─────────────────────────────────────────────
+# ARQUIVOS DE SISTEMA — WINDOWS
+# ─────────────────────────────────────────────
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# ─────────────────────────────────────────────
+# ARQUIVOS DE SISTEMA — macOS
+# ─────────────────────────────────────────────
+.DS_Store
+.AppleDouble
+
+# ─────────────────────────────────────────────
+# EDITORES E IDEs
+# ─────────────────────────────────────────────
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# ─────────────────────────────────────────────
+# VARIÁVEIS DE AMBIENTE (segurança)
+# ─────────────────────────────────────────────
+.env
+.env.local
