@@ -117,19 +117,49 @@ pip install -r requirements.txt
 
 ## ▶️ Como Executar
 
-Com o ambiente virtual ativado, rode o script:
+Com o ambiente virtual ativado, você pode executar os diferentes scripts do projeto. 
+Se o venv já estiver ativado no terminal, use o comando `python <nome_do_script.py>`. 
+Caso contrário, no Windows, você pode rodar apontando para o Python do venv: `.\venv\Scripts\python <nome_do_script.py>`.
 
-```powershell
-.\venv\Scripts\python processamento_imagem.py
-```
+Abaixo estão os comandos e descrições para executar cada um dos scripts do repositório:
 
-Ou, se o venv já estiver ativado no terminal:
-
+### 1. Processamento de Imagens
+Script que realiza a conversão de espaços de cor e análise de histogramas.
 ```powershell
 python processamento_imagem.py
 ```
 
-### Exemplo de sessão interativa
+### 2. Contagem de Galinhas
+Pipeline de Visão Computacional para identificar e contar galinhas em imagens (utiliza Watershed e Distance Transform).
+```powershell
+python contar_galinhas.py
+```
+
+### 3. Identificação de Bolinhas
+Pipeline para detectar e contar objetos esféricos/circulares utilizando a Transformada de Hough.
+```powershell
+python identificar_bolinhas.py
+```
+
+### 4. Rastreamento (Humano vs Robô)
+Sistema de rastreamento em vídeo utilizando YOLOv8, YOLO-Pose e ByteTrack.
+```powershell
+python track_robot_human.py
+```
+
+### 5. Pipeline de Filtros
+Executa um pipeline de filtros e processamentos de imagem em tempo real.
+```powershell
+python pipeline_filtros.py
+```
+
+### 6. Eventos de Mouse e Trackbar
+Script interativo para demonstrar o uso de eventos de mouse e trackbars no OpenCV.
+```powershell
+python mouse_trackbar.py
+```
+
+### Exemplo de sessão interativa (`processamento_imagem.py`)
 
 ```
 ════════════════════════════════════════════════════════════
