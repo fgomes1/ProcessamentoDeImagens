@@ -101,6 +101,8 @@ class App(tk.Tk):
         fr_hist_btns.pack(fill="x", padx=4, pady=2)
         self.btn_usar_base = tk.Button(fr_hist_btns, text="⬆ Usar como Base", font=("Segoe UI", 9), command=self._usar_hist_como_base)
         self.btn_usar_base.pack(fill="x", pady=1)
+        self.btn_rem_hist = tk.Button(fr_hist_btns, text="－ Remover Sel.", font=("Segoe UI", 9), command=self._remover_hist_selecionado)
+        self.btn_rem_hist.pack(fill="x", pady=1)
         self.btn_limpar_hist = tk.Button(fr_hist_btns, text="🗑 Limpar Histórico", font=("Segoe UI", 9), command=self._limpar_historico)
         self.btn_limpar_hist.pack(fill="x", pady=1)
 
@@ -212,11 +214,12 @@ class App(tk.Tk):
             w.configure(fg=fg)
         self.lbl_titulo.configure(bg=bg, fg=t["accent"])
         self.listbox.configure(bg=entry, fg=fg, selectbackground=t["accent"], selectforeground=bg, borderwidth=0, highlightthickness=1, highlightcolor=t["accent"])
-        for btn in [self.btn_add, self.btn_rem, self.btn_clear, self.btn_salvar, self.btn_usar_base, self.btn_limpar_hist]:
+        for btn in [self.btn_add, self.btn_rem, self.btn_clear, self.btn_salvar, self.btn_usar_base, self.btn_rem_hist, self.btn_limpar_hist]:
             btn.configure(bg=t["btn"], fg=t["btn_fg"], activebackground=t["accent"], activeforeground=bg, relief="flat", borderwidth=0)
         self.btn_add.configure(bg=t["success"], fg="#1e1e2e")
         self.btn_rem.configure(bg=t["danger"], fg="#1e1e2e")
         self.btn_usar_base.configure(bg=t["warning"], fg="#1e1e2e")
+        self.btn_rem_hist.configure(bg=t["danger"], fg="#1e1e2e")
         self.btn_limpar_hist.configure(bg=t["danger"], fg="#1e1e2e")
         self.btn_salvar.configure(bg=t["accent"], fg="#1e1e2e")
         canvas_bg = "#11111b" if self.tema_atual == "Escuro" else "#e6e9ef"
@@ -382,6 +385,21 @@ class App(tk.Tk):
         """Limpa toda a lista de histórico."""
         self.historico.clear()
         self.listbox_hist.delete(0, "end")
+
+    def _remover_hist_selecionado(self):
+        """Remove o item selecionado do histórico."""
+        sel = self.listbox_hist.curselection()
+        if not sel:
+            return
+        idx = sel[0]
+        self.historico.pop(idx)
+        self.listbox_hist.delete(idx)
+        self.canvas_proc.delete("all")
+        
+        # Atualiza a numeração do histórico
+        self.listbox_hist.delete(0, "end")
+        for i, (descricao, _) in enumerate(self.historico):
+            self.listbox_hist.insert("end", f"{i + 1}. {descricao}")
 
     def _live_update(self, categoria):
         """Chamado pelos sliders — reaplica o último método da categoria."""
