@@ -124,14 +124,14 @@ class App(tk.Tk):
 
         # Row 0: Conversão de Cor
         tk.Label(fm, text="🎨 Cor:", font=font_lbl).grid(row=0, column=0, sticky="w", **pad)
-        self.combo_cor = ttk.Combobox(fm, values=["Cinza", "HSV", "Lab", "YCrCb", "HLS"], state="readonly", width=10)
+        self.combo_cor = ttk.Combobox(fm, values=["Cinza", "HSV", "Lab", "YCrCb", "HLS", "★Cinza-Manual"], state="readonly", width=14)
         self.combo_cor.set("Cinza")
         self.combo_cor.grid(row=0, column=1, **pad)
         tk.Button(fm, text="Aplicar", font=font_btn, command=self.aplicar_conversao).grid(row=0, column=2, **pad)
 
         # Row 1: Filtro
         tk.Label(fm, text="🔵 Filtro:", font=font_lbl).grid(row=1, column=0, sticky="w", **pad)
-        self.combo_filtro = ttk.Combobox(fm, values=["Gaussiano", "Mediana", "Bilateral", "Cartoon"], state="readonly", width=10)
+        self.combo_filtro = ttk.Combobox(fm, values=["Gaussiano", "Mediana", "Bilateral", "Cartoon", "★Média-Manual"], state="readonly", width=14)
         self.combo_filtro.set("Gaussiano")
         self.combo_filtro.grid(row=1, column=1, **pad)
         tk.Label(fm, text="Kernel:", font=font_lbl).grid(row=1, column=3, sticky="e", **pad)
@@ -143,7 +143,7 @@ class App(tk.Tk):
 
         # Row 2: Borda
         tk.Label(fm, text="📐 Borda:", font=font_lbl).grid(row=2, column=0, sticky="w", **pad)
-        self.combo_borda = ttk.Combobox(fm, values=["Canny", "Laplaciano", "Sobel X", "Sobel Y"], state="readonly", width=10)
+        self.combo_borda = ttk.Combobox(fm, values=["Canny", "Laplaciano", "Sobel X", "Sobel Y", "★Sobel-Manual"], state="readonly", width=14)
         self.combo_borda.set("Canny")
         self.combo_borda.grid(row=2, column=1, **pad)
         tk.Label(fm, text="Limiar:", font=font_lbl).grid(row=2, column=3, sticky="e", **pad)
@@ -155,7 +155,7 @@ class App(tk.Tk):
 
         # Row 3: Binarização
         tk.Label(fm, text="⬛ Binário:", font=font_lbl).grid(row=3, column=0, sticky="w", **pad)
-        self.combo_bin = ttk.Combobox(fm, values=["Otsu", "Adaptativo", "Global"], state="readonly", width=10)
+        self.combo_bin = ttk.Combobox(fm, values=["Otsu", "Adaptativo", "Global", "★Otsu-Manual"], state="readonly", width=14)
         self.combo_bin.set("Otsu")
         self.combo_bin.grid(row=3, column=1, **pad)
         tk.Label(fm, text="Limiar:", font=font_lbl).grid(row=3, column=3, sticky="e", **pad)
@@ -167,7 +167,7 @@ class App(tk.Tk):
 
         # Row 4: Morfologia
         tk.Label(fm, text="🔷 Morfol.:", font=font_lbl).grid(row=4, column=0, sticky="w", **pad)
-        self.combo_morf = ttk.Combobox(fm, values=["Abertura", "Fechamento", "Erosão", "Dilatação", "Gradiente"], state="readonly", width=10)
+        self.combo_morf = ttk.Combobox(fm, values=["Abertura", "Fechamento", "Erosão", "Dilatação", "Gradiente", "★Erosão-Manual"], state="readonly", width=14)
         self.combo_morf.set("Abertura")
         self.combo_morf.grid(row=4, column=1, **pad)
         tk.Label(fm, text="Kernel:", font=font_lbl).grid(row=4, column=3, sticky="e", **pad)
@@ -331,18 +331,123 @@ class App(tk.Tk):
         elif categoria == "morf" and m.startswith("Morf"):
             self.aplicar_morfologia()
 
+    # ── Implementação Manual: Cinza ───────────────────────────
+    def _cinza_manual(self, img_bgr: np.ndarray) -> np.ndarray:
+        """
+        Conversão manual BGR → Escala de Cinza.
+        Fórmula ITU-R BT.601: Y = 0.299*R + 0.587*G + 0.114*B
+        Implementada sem usar cv2.cvtColor.
+        """
+        b = img_bgr[:, :, 0].astype(np.float64)
+        g = img_bgr[:, :, 1].astype(np.float64)
+        r = img_bgr[:, :, 2].astype(np.float64)
+        cinza = (0.114 * b + 0.587 * g + 0.299 * r).astype(np.uint8)
+        return cinza
+
+    # ── Implementação Manual: Filtro de Média ─────────────────
+    def _media_manual(self, img: np.ndarray, k: int) -> np.ndarray:
+        """
+        Filtro de média (box blur) implementado manualmente.
+        Cria um kernel k×k onde todos os pesos = 1/(k*k),
+        depois aplica convolução 2D com cv2.filter2D.
+        """
+        kernel = np.ones((k, k), dtype=np.float32) / (k * k)
+        return cv2.filter2D(img, -1, kernel)
+
+    # ── Implementação Manual: Sobel ──────────────────────────
+    def _sobel_manual(self, gray: np.ndarray) -> np.ndarray:
+        """
+        Detector de bordas Sobel implementado manualmente.
+        Define os kernels Gx e Gy explicitamente e calcula
+        a magnitude do gradiente: M = sqrt(Gx² + Gy²).
+        """
+        # Kernels de Sobel definidos manualmente
+        kx = np.array([[-1, 0, 1],
+                       [-2, 0, 2],
+                       [-1, 0, 1]], dtype=np.float32)
+        ky = np.array([[-1, -2, -1],
+                       [ 0,  0,  0],
+                       [ 1,  2,  1]], dtype=np.float32)
+        # Convolução com cada kernel
+        gx = cv2.filter2D(gray, cv2.CV_64F, kx)
+        gy = cv2.filter2D(gray, cv2.CV_64F, ky)
+        # Magnitude do gradiente
+        magnitude = cv2.magnitude(gx, gy)
+        return cv2.convertScaleAbs(magnitude)
+
+    # ── Implementação Manual: Otsu ───────────────────────────
+    def _otsu_manual(self, gray: np.ndarray) -> np.ndarray:
+        """
+        Binarização de Otsu implementada manualmente.
+        Calcula o histograma e encontra o limiar que maximiza
+        a variância entre classes (foreground vs background).
+        Não usa cv2.THRESH_OTSU.
+        """
+        hist = cv2.calcHist([gray], [0], None, [256], [0, 256]).ravel()
+        total = gray.size
+        soma_total = np.dot(np.arange(256), hist)
+
+        soma_bg, peso_bg = 0.0, 0.0
+        max_variancia, melhor_limiar = 0.0, 0
+
+        for t in range(256):
+            peso_bg += hist[t]
+            if peso_bg == 0:
+                continue
+            peso_fg = total - peso_bg
+            if peso_fg == 0:
+                break
+            soma_bg += t * hist[t]
+            media_bg = soma_bg / peso_bg
+            media_fg = (soma_total - soma_bg) / peso_fg
+            variancia = peso_bg * peso_fg * (media_bg - media_fg) ** 2
+            if variancia > max_variancia:
+                max_variancia = variancia
+                melhor_limiar = t
+
+        # Aplica o limiar encontrado
+        resultado = np.zeros_like(gray)
+        resultado[gray > melhor_limiar] = 255
+        return resultado
+
+    # ── Implementação Manual: Erosão ─────────────────────────
+    def _erosao_manual(self, img: np.ndarray, k: int) -> np.ndarray:
+        """
+        Erosão morfológica implementada manualmente.
+        Para cada pixel, verifica a vizinhança k×k:
+        o pixel de saída recebe o valor MÍNIMO da vizinhança.
+        Usa um kernel retangular de 1's (elemento estruturante).
+        """
+        h, w = img.shape[:2]
+        pad = k // 2
+        # Adiciona borda (padding) com valor 255 para não afetar as bordas
+        padded = cv2.copyMakeBorder(img, pad, pad, pad, pad, cv2.BORDER_CONSTANT, value=255)
+        resultado = np.zeros_like(img)
+        for i in range(h):
+            for j in range(w):
+                # Extrai a vizinhança k×k
+                vizinhanca = padded[i:i + k, j:j + k]
+                resultado[i, j] = vizinhanca.min()
+        return resultado
+
     # ── Conversão de Cor ─────────────────────────────────────
     def aplicar_conversao(self):
         if not self._checar_selecao():
             return
         img = self.imagem_selecionada
         metodo = self.combo_cor.get()
-        codigos = {
-            "Cinza": cv2.COLOR_BGR2GRAY, "HSV": cv2.COLOR_BGR2HSV,
-            "Lab": cv2.COLOR_BGR2Lab, "YCrCb": cv2.COLOR_BGR2YCrCb,
-            "HLS": cv2.COLOR_BGR2HLS,
-        }
-        img.mat_processada = cv2.cvtColor(img.mat_original, codigos[metodo])
+
+        if metodo == "★Cinza-Manual":
+            # Implementação própria da conversão para cinza
+            img.mat_processada = self._cinza_manual(img.mat_original)
+        else:
+            codigos = {
+                "Cinza": cv2.COLOR_BGR2GRAY, "HSV": cv2.COLOR_BGR2HSV,
+                "Lab": cv2.COLOR_BGR2Lab, "YCrCb": cv2.COLOR_BGR2YCrCb,
+                "HLS": cv2.COLOR_BGR2HLS,
+            }
+            img.mat_processada = cv2.cvtColor(img.mat_original, codigos[metodo])
+
         img.metodo = f"Cor: {metodo}"
         self._exibir_preview()
 
@@ -372,6 +477,9 @@ class App(tk.Tk):
             for _ in range(k // 2 + 1):
                 color = cv2.bilateralFilter(color, 9, 300, 300)
             img.mat_processada = cv2.bitwise_and(color, color, mask=edges)
+        elif metodo == "★Média-Manual":
+            # Implementação própria do filtro de média
+            img.mat_processada = self._media_manual(src, k)
 
         img.metodo = f"Filtro: {metodo} (k={k})"
         self._exibir_preview()
@@ -397,6 +505,9 @@ class App(tk.Tk):
         elif metodo == "Sobel Y":
             sob = cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize=3)
             img.mat_processada = cv2.convertScaleAbs(sob)
+        elif metodo == "★Sobel-Manual":
+            # Implementação própria do Sobel com kernels definidos à mão
+            img.mat_processada = self._sobel_manual(gray)
 
         img.metodo = f"Borda: {metodo} (t={limiar})"
         self._exibir_preview()
@@ -417,6 +528,9 @@ class App(tk.Tk):
                                                         cv2.THRESH_BINARY, 31, 8)
         elif metodo == "Global":
             _, img.mat_processada = cv2.threshold(gray, limiar, 255, cv2.THRESH_BINARY)
+        elif metodo == "★Otsu-Manual":
+            # Implementação própria do algoritmo de Otsu
+            img.mat_processada = self._otsu_manual(gray)
 
         img.metodo = f"Bin: {metodo} (t={limiar})"
         self._exibir_preview()
@@ -438,12 +552,17 @@ class App(tk.Tk):
         elif len(src.shape) == 3:
             src = cv2.cvtColor(src, cv2.COLOR_BGR2GRAY)
 
-        ops = {
-            "Abertura": cv2.MORPH_OPEN, "Fechamento": cv2.MORPH_CLOSE,
-            "Erosão": cv2.MORPH_ERODE, "Dilatação": cv2.MORPH_DILATE,
-            "Gradiente": cv2.MORPH_GRADIENT,
-        }
-        img.mat_processada = cv2.morphologyEx(src, ops[metodo], kernel, iterations=1)
+        if metodo == "★Erosão-Manual":
+            # Implementação própria da erosão (mínimo na vizinhança)
+            img.mat_processada = self._erosao_manual(src, k)
+        else:
+            ops = {
+                "Abertura": cv2.MORPH_OPEN, "Fechamento": cv2.MORPH_CLOSE,
+                "Erosão": cv2.MORPH_ERODE, "Dilatação": cv2.MORPH_DILATE,
+                "Gradiente": cv2.MORPH_GRADIENT,
+            }
+            img.mat_processada = cv2.morphologyEx(src, ops[metodo], kernel, iterations=1)
+
         img.metodo = f"Morf: {metodo} (k={k})"
         self._exibir_preview()
 
