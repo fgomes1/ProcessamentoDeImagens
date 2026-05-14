@@ -47,6 +47,9 @@ class App(tk.Tk):
         self.tema_atual = "Escuro"
         self.photo_orig = None
         self.photo_proc = None
+        # Histórico: lista de tuplas (descricao, mat_copia)
+        self.historico: list[tuple[str, np.ndarray]] = []
+        self.photo_hist = None
         self._construir_ui()
         self._aplicar_tema()
 
@@ -69,22 +72,37 @@ class App(tk.Tk):
         self.main_pane = tk.PanedWindow(self, orient="horizontal", sashwidth=6)
         self.main_pane.pack(fill="both", expand=True, padx=8, pady=8)
 
-        # ── Painel Esquerdo: Lista ───────────────────────────
-        self.frame_lista = tk.Frame(self.main_pane, width=220)
-        self.main_pane.add(self.frame_lista, minsize=180)
-        tk.Label(self.frame_lista, text="📋 Imagens Carregadas", font=("Segoe UI", 11, "bold")).pack(pady=(4,4), anchor="w", padx=6)
-        self.listbox = tk.Listbox(self.frame_lista, font=("Segoe UI", 10), activestyle="none", selectmode="single")
-        self.listbox.pack(fill="both", expand=True, padx=4)
+        # ── Painel Esquerdo: Lista + Histórico ────────────────
+        self.frame_lista = tk.Frame(self.main_pane, width=240)
+        self.main_pane.add(self.frame_lista, minsize=200)
+
+        # Sub-painel: Imagens Carregadas
+        tk.Label(self.frame_lista, text="📋 Imagens Carregadas", font=("Segoe UI", 11, "bold")).pack(pady=(4,2), anchor="w", padx=6)
+        self.listbox = tk.Listbox(self.frame_lista, font=("Segoe UI", 10), activestyle="none", selectmode="single", height=6)
+        self.listbox.pack(fill="x", padx=4)
         self.listbox.bind("<<ListboxSelect>>", self._ao_selecionar)
         # Botões CRUD
         fr_btns = tk.Frame(self.frame_lista)
-        fr_btns.pack(fill="x", padx=4, pady=4)
+        fr_btns.pack(fill="x", padx=4, pady=2)
         self.btn_add = tk.Button(fr_btns, text="＋ Adicionar", font=("Segoe UI", 9), command=self.adicionar_imagens)
         self.btn_add.pack(fill="x", pady=1)
         self.btn_rem = tk.Button(fr_btns, text="－ Remover", font=("Segoe UI", 9), command=self.remover_imagem)
         self.btn_rem.pack(fill="x", pady=1)
         self.btn_clear = tk.Button(fr_btns, text="🗑 Limpar Tudo", font=("Segoe UI", 9), command=self.limpar_tudo)
         self.btn_clear.pack(fill="x", pady=1)
+
+        # Sub-painel: Histórico de Processamento
+        tk.Label(self.frame_lista, text="📜 Histórico", font=("Segoe UI", 11, "bold")).pack(pady=(8,2), anchor="w", padx=6)
+        self.listbox_hist = tk.Listbox(self.frame_lista, font=("Segoe UI", 9), activestyle="none", selectmode="single")
+        self.listbox_hist.pack(fill="both", expand=True, padx=4)
+        self.listbox_hist.bind("<<ListboxSelect>>", self._ao_selecionar_hist)
+        # Botões do histórico
+        fr_hist_btns = tk.Frame(self.frame_lista)
+        fr_hist_btns.pack(fill="x", padx=4, pady=2)
+        self.btn_usar_base = tk.Button(fr_hist_btns, text="⬆ Usar como Base", font=("Segoe UI", 9), command=self._usar_hist_como_base)
+        self.btn_usar_base.pack(fill="x", pady=1)
+        self.btn_limpar_hist = tk.Button(fr_hist_btns, text="🗑 Limpar Histórico", font=("Segoe UI", 9), command=self._limpar_historico)
+        self.btn_limpar_hist.pack(fill="x", pady=1)
 
         # ── Painel Direito ───────────────────────────────────
         self.frame_dir = tk.Frame(self.main_pane)
@@ -194,14 +212,17 @@ class App(tk.Tk):
             w.configure(fg=fg)
         self.lbl_titulo.configure(bg=bg, fg=t["accent"])
         self.listbox.configure(bg=entry, fg=fg, selectbackground=t["accent"], selectforeground=bg, borderwidth=0, highlightthickness=1, highlightcolor=t["accent"])
-        for btn in [self.btn_add, self.btn_rem, self.btn_clear, self.btn_salvar]:
+        for btn in [self.btn_add, self.btn_rem, self.btn_clear, self.btn_salvar, self.btn_usar_base, self.btn_limpar_hist]:
             btn.configure(bg=t["btn"], fg=t["btn_fg"], activebackground=t["accent"], activeforeground=bg, relief="flat", borderwidth=0)
         self.btn_add.configure(bg=t["success"], fg="#1e1e2e")
         self.btn_rem.configure(bg=t["danger"], fg="#1e1e2e")
+        self.btn_usar_base.configure(bg=t["warning"], fg="#1e1e2e")
+        self.btn_limpar_hist.configure(bg=t["danger"], fg="#1e1e2e")
         self.btn_salvar.configure(bg=t["accent"], fg="#1e1e2e")
         canvas_bg = "#11111b" if self.tema_atual == "Escuro" else "#e6e9ef"
         self.canvas_orig.configure(bg=canvas_bg)
         self.canvas_proc.configure(bg=canvas_bg)
+        self.listbox_hist.configure(bg=entry, fg=fg, selectbackground=t["warning"], selectforeground=bg, borderwidth=0, highlightthickness=1, highlightcolor=t["warning"])
         self.main_pane.configure(bg=bg)
         # Apply to all labels and frames recursively
         self._tema_recursivo(self.frame_metodos, bg, fg)
@@ -263,6 +284,7 @@ class App(tk.Tk):
         self.imagem_selecionada = None
         self.canvas_orig.delete("all")
         self.canvas_proc.delete("all")
+        self._limpar_historico()
 
     def _ao_selecionar(self, event=None):
         sel = self.listbox.curselection()
@@ -316,6 +338,50 @@ class App(tk.Tk):
             messagebox.showwarning("Atenção", "Selecione uma imagem na lista primeiro!")
             return False
         return True
+
+    # ── Histórico ────────────────────────────────────────────
+    def _adicionar_ao_historico(self, descricao: str, mat: np.ndarray):
+        """Salva uma cópia da Mat processada no histórico."""
+        self.historico.append((descricao, mat.copy()))
+        idx = len(self.historico)
+        self.listbox_hist.insert("end", f"{idx}. {descricao}")
+        self.listbox_hist.see("end")
+
+    def _ao_selecionar_hist(self, event=None):
+        """Ao clicar no histórico, mostra a imagem no painel Processada."""
+        sel = self.listbox_hist.curselection()
+        if not sel:
+            return
+        descricao, mat = self.historico[sel[0]]
+        self.photo_hist = self._mat_para_photo(mat, self.canvas_proc)
+        if self.photo_hist:
+            self.canvas_proc.delete("all")
+            self.canvas_proc.create_image(
+                self.canvas_proc.winfo_width() // 2,
+                self.canvas_proc.winfo_height() // 2,
+                anchor="center", image=self.photo_hist
+            )
+
+    def _usar_hist_como_base(self):
+        """Usa o item selecionado do histórico como imagem base para novos processamentos."""
+        sel = self.listbox_hist.curselection()
+        if not sel:
+            messagebox.showwarning("Atenção", "Selecione um item do histórico primeiro!")
+            return
+        if not self.imagem_selecionada:
+            messagebox.showwarning("Atenção", "Selecione uma imagem na lista primeiro!")
+            return
+        descricao, mat = self.historico[sel[0]]
+        self.imagem_selecionada.mat_original = mat.copy()
+        self.imagem_selecionada.mat_processada = None
+        self.imagem_selecionada.metodo = ""
+        self._exibir_preview()
+        messagebox.showinfo("Base Atualizada", f"A imagem base agora é:\n{descricao}\n\nAplique um novo método em cima dela!")
+
+    def _limpar_historico(self):
+        """Limpa toda a lista de histórico."""
+        self.historico.clear()
+        self.listbox_hist.delete(0, "end")
 
     def _live_update(self, categoria):
         """Chamado pelos sliders — reaplica o último método da categoria."""
@@ -449,6 +515,7 @@ class App(tk.Tk):
             img.mat_processada = cv2.cvtColor(img.mat_original, codigos[metodo])
 
         img.metodo = f"Cor: {metodo}"
+        self._adicionar_ao_historico(img.metodo, img.mat_processada)
         self._exibir_preview()
 
     # ── Filtros ──────────────────────────────────────────────
@@ -482,6 +549,7 @@ class App(tk.Tk):
             img.mat_processada = self._media_manual(src, k)
 
         img.metodo = f"Filtro: {metodo} (k={k})"
+        self._adicionar_ao_historico(img.metodo, img.mat_processada)
         self._exibir_preview()
 
     # ── Detector de Borda ────────────────────────────────────
@@ -510,6 +578,7 @@ class App(tk.Tk):
             img.mat_processada = self._sobel_manual(gray)
 
         img.metodo = f"Borda: {metodo} (t={limiar})"
+        self._adicionar_ao_historico(img.metodo, img.mat_processada)
         self._exibir_preview()
 
     # ── Binarização ──────────────────────────────────────────
@@ -533,6 +602,7 @@ class App(tk.Tk):
             img.mat_processada = self._otsu_manual(gray)
 
         img.metodo = f"Bin: {metodo} (t={limiar})"
+        self._adicionar_ao_historico(img.metodo, img.mat_processada)
         self._exibir_preview()
 
     # ── Morfologia ───────────────────────────────────────────
@@ -564,6 +634,7 @@ class App(tk.Tk):
             img.mat_processada = cv2.morphologyEx(src, ops[metodo], kernel, iterations=1)
 
         img.metodo = f"Morf: {metodo} (k={k})"
+        self._adicionar_ao_historico(img.metodo, img.mat_processada)
         self._exibir_preview()
 
     # ── Salvar ───────────────────────────────────────────────
